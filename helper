@@ -1,13 +1,12 @@
 #!/bin/bash
 # This script is used to build and run the docker image for building AOSP.
 
-# Tell the docker CLI not to print the 'What's next?' hints.
-export DOCKER_CLI_HINTS=false
-
 IMAGE_NAME=aosp-build:latest
 CONTAINER_NAME=aosp
 PLATFORM="--platform linux/amd64"
 DOCKERFILE=Dockerfile
+MY_UID=$(id -u)
+MY_NAME=$(id -un)
 
 do_build() {
     echo "Building the docker image $IMAGE_NAME"
@@ -27,13 +26,15 @@ do_run() {
     }
     echo "Run the docker container $CONTAINER_NAME"
     docker rm $CONTAINER_NAME &>/dev/null
+    ABS_AOSP_DIR=$(realpath $1)
     set -ex
-    docker run $PLATFORM --rm -d --name $CONTAINER_NAME -m 16g -h aosp -v $(realpath $1):/aosp -w /aosp $IMAGE_NAME
+    # pass uid and name to `docker run` to ensure user-create run only once.
+    docker run $PLATFORM --rm -d --name $CONTAINER_NAME -m 16g -h aosp -v $ABS_AOSP_DIR:/aosp -w /aosp $IMAGE_NAME $MY_UID $MY_NAME
 }
 
 do_bash() {
     set -x
-    docker exec -it $CONTAINER_NAME /bin/bash
+    docker exec -it -u $MY_NAME $CONTAINER_NAME /bin/bash
 }
 
 do_stop() {
@@ -45,8 +46,6 @@ do_stop() {
 do_clean() {
     echo "Cleaning up..."
     set -x
-    # prune all stopped containers
-    docker container prune -f
     # prune all dangling images
     docker image prune -f
     # prune all unused networks

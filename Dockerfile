@@ -51,8 +51,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 
 RUN cat <<EOF >/usr/local/bin/entrypoint && chmod +x /usr/local/bin/entrypoint
 #!/bin/bash
+set -e
+useradd -m -s /bin/bash -u \$1 -U \$2
 trap "exit 0" TERM
-while true ; do sleep 2 ; done
+while true ; do sleep 0.2 ; done
 EOF
 
 ENTRYPOINT [ "/usr/local/bin/entrypoint" ]
